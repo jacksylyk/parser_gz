@@ -6,6 +6,9 @@ class Customer(models.Model):
     customer_name = models.CharField(verbose_name="Название", max_length=255)
     bin = models.CharField(verbose_name='БИН', max_length=255)
 
+    def __str__(self):
+        return self.bin
+
     class Meta:
         verbose_name = 'Заказчик'
         verbose_name_plural = 'Заказчики'
@@ -16,6 +19,9 @@ class Contract(models.Model):
     file_path = models.FileField(verbose_name="Файл", upload_to='contracts/')
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="contracts")
 
+    def __str__(self):
+        return self.customer.bin
+
     class Meta:
         verbose_name = 'Договор'
         verbose_name_plural = 'Договора'
@@ -24,6 +30,9 @@ class Contract(models.Model):
 class PhoneNumber(models.Model):
     number = models.CharField(verbose_name="Номер телефона", max_length=255)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="phone_numbers")
+
+    def __str__(self):
+        return f"{self.number} - {self.customer}"
 
     class Meta:
         verbose_name = 'Номер телефона'

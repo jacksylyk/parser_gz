@@ -3,6 +3,9 @@ from .models import Customer, Contract, PhoneNumber
 
 # Register your models here.
 
-admin.site.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    search_fields = ['bin']
+
+admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Contract)
 admin.site.register(PhoneNumber)
