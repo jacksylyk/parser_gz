@@ -1,0 +1,7 @@
+/venv/
+/.venv/
+*/migrations/*
+db.sqlite3
+/.idea/
+*.pdf
+
