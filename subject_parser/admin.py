@@ -6,6 +6,7 @@ from .models import Customer, Contract, PhoneNumber
 class CustomerAdmin(admin.ModelAdmin):
     search_fields = ['bin']
 
+
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Contract)
 admin.site.register(PhoneNumber)

@@ -9,20 +9,27 @@
                 <th>Номер участника</th>
                 <th>Название</th>
                 <th>БИН</th>
+                <th>Номера телефонов</th>
             </tr>
         </thead>
         <tbody>
-            {% for customer in customers %}
+            {% for customer in data %}
                 <tr>
-                    <td>{{ customer.customer_number }}</td>
-                    <td>{{ customer.customer_name }}</td>
-                    <td>{{ customer.bin }}</td>
+                    <td>{{ customer.customer.customer_number }}</td>
+                    <td>{{ customer.customer.customer_name }}</td>
+                    <td>{{ customer.customer.bin }}</td>
+                    <td>
+                        {% for phone in customer.phone_numbers.all %}
+                            <p>{{ phone.number }}</p>
+                        {% empty %}
+                            <p>Нет номеров</p>
+                        {% endfor %}
+                    </td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <!-- Пагинация -->
     <nav aria-label="Page navigation" class="d-flex justify-content-center">
         <ul class="pagination mx-auto">
             {% if customers.has_previous %}

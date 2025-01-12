@@ -16,11 +16,20 @@ def index(request):
     customers = Customer.objects.all()
 
     paginator = Paginator(customers, 25)
-
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    return render(request, 'parser/main.html', {'customers': page_obj})
+    customers_with_phone_numbers = []
+    for customer in page_obj:
+        phone_numbers = customer.phone_numbers.all()
+        customers_with_phone_numbers.append({
+            'customer': customer,
+            'phone_numbers': phone_numbers
+        })
+    
+    print(customers_with_phone_numbers)
+
+    return render(request, 'parser/main.html', {'data': customers_with_phone_numbers, 'page_obj': page_obj})
 
 
 
@@ -31,22 +40,25 @@ GRAPHQL_API_TOKEN = "2d9be756545e4447462a55fbe2ec0ff0"
 BASE_URL = "https://goszakup.gov.kz"
 
 
+
 def fetch_customers(request):
     total_saved = 0
-    page_url = f"{BASE_URL}/ru/registry/supplierreg?filter%5Btype%5D%5B0%5D=1&count_record=50"
+    base_url = f"{BASE_URL}/ru/registry/supplierreg?filter%5Btype%5D%5B0%5D=1&count_record=50"
+    page = 1  # Начальная страница
+    page_url = f"{base_url}&page={page}"
 
-    while page_url:
+    while True:
         response = requests.get(page_url)
         if response.status_code != 200:
-            return JsonResponse({"error": f"Failed to fetch page: {page_url}"}, status=response.status_code)
+            break  # Останавливаем цикл, если статус не 200
 
         soup = BeautifulSoup(response.text, "html.parser")
-
         table = soup.find("table", id="search-result")
         if not table:
-            break
+            break  # Останавливаем, если таблица не найдена
 
         rows = table.find_all("tr")
+        print(f"Page {page}: Found {len(rows)} rows.")
         customers_to_save = []
 
         for row in rows:
@@ -60,7 +72,7 @@ def fetch_customers(request):
 
             if bin_value:
                 # Проверяем, существует ли уже заказчик с таким БИН
-                existing_customer = Customer.objects.filter(bin=bin_value).first()
+                existing_customer = Customer.objects.filter(bin=bin_value).exists()
                 if not existing_customer:
                     customers_to_save.append(Customer(
                         customer_number=customer_number,
@@ -68,19 +80,14 @@ def fetch_customers(request):
                         bin=bin_value
                     ))
 
-        # Используем bulk_create для добавления заказчиков
+        # Сохраняем уникальных заказчиков
         if customers_to_save:
             Customer.objects.bulk_create(customers_to_save, ignore_conflicts=True)
             total_saved += len(customers_to_save)
 
-        pagination = soup.find("ul", class_="pagination")
-        if not pagination:
-            break
-
-        next_button = pagination.find("a", href=True)
-        if next_button:
-            span = next_button.find("span")
-            if span and span.text.strip() == "»":
-                page_url = BASE_URL + next_button["href"]
+        # Переход к следующей странице
+        page += 1
+        page_url = f"{base_url}&page={page}"
+        print(page)
 
     return JsonResponse({"message": f"Total customers saved: {total_saved}"})
