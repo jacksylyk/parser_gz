@@ -1,16 +1,20 @@
-from django.shortcuts import render
 import requests
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
-
+from django_celery_results.models import TaskResult
+from core.tasks import fetch_and_save_customers
 from subject_parser.models import Customer
+
+from django.http import JsonResponse
+from celery.result import AsyncResult
 
 from bs4 import BeautifulSoup
 
-# from core.models import Customer
-
-
 from django.core.paginator import Paginator
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def index(request):
     customers = Customer.objects.all()
@@ -26,68 +30,55 @@ def index(request):
             'customer': customer,
             'phone_numbers': phone_numbers
         })
-    
-    print(customers_with_phone_numbers)
 
     return render(request, 'parser/main.html', {'data': customers_with_phone_numbers, 'page_obj': page_obj})
 
 
+def fetch_customers_view(request):
+    task = fetch_and_save_customers.delay()
+    return redirect('task_status_page', task_id=task.id)
 
-# URL и токен для доступа к GraphQL API
-GRAPHQL_API_URL = "https://ows.goszakup.gov.kz/v3/graphql"
-GRAPHQL_API_TOKEN = "2d9be756545e4447462a55fbe2ec0ff0"
+def task_status_view(request, task_id):
+    result = AsyncResult(task_id)
+    response = {
+        "task_id": task_id,
+        "task_name": result.task_name if hasattr(result, 'task_name') else "Неизвестно",
+        "status": result.status,
+        "result": result.result if result.ready() else None,
+    }
+    return JsonResponse(response)
 
-BASE_URL = "https://goszakup.gov.kz"
+def task_list_view(request):
+    tasks = TaskResult.objects.all().order_by('-date_done')[:50]
+    return render(request, 'core/results.html', {'tasks': tasks})
 
 
+import openpyxl
+from openpyxl.styles import Font
+from django.http import HttpResponse
+from subject_parser.models import PhoneNumber
 
-def fetch_customers(request):
-    total_saved = 0
-    base_url = f"{BASE_URL}/ru/registry/supplierreg?filter%5Btype%5D%5B0%5D=1&count_record=50"
-    page = 1  # Начальная страница
-    page_url = f"{base_url}&page={page}"
+def export_phone_numbers_to_excel(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Phone Numbers"
 
-    while True:
-        response = requests.get(page_url)
-        if response.status_code != 200:
-            break  # Останавливаем цикл, если статус не 200
+    headers = ["ID", "Phone Number", "Customer"]
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.font = Font(bold=True)
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        table = soup.find("table", id="search-result")
-        if not table:
-            break  # Останавливаем, если таблица не найдена
+    phone_numbers = PhoneNumber.objects.select_related('customer').all()
 
-        rows = table.find_all("tr")
-        print(f"Page {page}: Found {len(rows)} rows.")
-        customers_to_save = []
+    for row_num, phone_number in enumerate(phone_numbers, 2):
+        ws.cell(row=row_num, column=1, value=phone_number.id)
+        ws.cell(row=row_num, column=2, value=phone_number.number)
+        ws.cell(row=row_num, column=3, value=str(phone_number.customer.customer_name))
 
-        for row in rows:
-            tds = row.find_all("td")[:3]
-            if len(tds) < 3:
-                continue
+    response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response['Content-Disposition'] = 'attachment; filename="phone_numbers.xlsx"'
 
-            customer_number = tds[0].text.strip()
-            customer_name = tds[1].text.strip()
-            bin_value = tds[2].text.strip()
+    wb.save(response)
 
-            if bin_value:
-                # Проверяем, существует ли уже заказчик с таким БИН
-                existing_customer = Customer.objects.filter(bin=bin_value).exists()
-                if not existing_customer:
-                    customers_to_save.append(Customer(
-                        customer_number=customer_number,
-                        customer_name=customer_name,
-                        bin=bin_value
-                    ))
-
-        # Сохраняем уникальных заказчиков
-        if customers_to_save:
-            Customer.objects.bulk_create(customers_to_save, ignore_conflicts=True)
-            total_saved += len(customers_to_save)
-
-        # Переход к следующей странице
-        page += 1
-        page_url = f"{base_url}&page={page}"
-        print(page)
-
-    return JsonResponse({"message": f"Total customers saved: {total_saved}"})
+    return response

@@ -1,11 +1,15 @@
+import os
 import requests
 from django.core.files import File
 from io import BytesIO
 from .models import Contract, PhoneNumber
 import pdfplumber
+from dotenv import load_dotenv
 
-GRAPHQL_API_URL = "https://ows.goszakup.gov.kz/v3/graphql"
-GRAPHQL_API_TOKEN = "2d9be756545e4447462a55fbe2ec0ff0"
+load_dotenv()
+
+GRAPHQL_API_URL = os.getenv('GRAPHQL_API_URL')
+GRAPHQL_API_TOKEN = os.getenv('GRAPHQL_API_TOKEN')
 
 def load_contract(customer):
     bin_number = customer.bin

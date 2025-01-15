@@ -1,0 +1,83 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Результаты задач</h1>
+    <div id="task-status-container" class="mb-5">
+        <div class="input-group mb-3">
+            <input type="text" id="task-id-input" class="form-control" placeholder="Введите ID задачи">
+            <button class="btn btn-primary" onclick="checkTaskStatus()">Проверить статус</button>
+        </div>
+        <div id="task-result" class="alert alert-info d-none" role="alert"></div>
+    </div>
+
+    <h2 class="mb-3">Список задач</h2>
+    <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Название задачи</th>
+                <th>ID задачи</th>
+                <th>Статус</th>
+                <th>Дата выполнения</th>
+                <th>Результат</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td>{{ task.periodic_task_name|default:"-" }}</td>
+                <td>{{ task.task_id }}</td>
+                <td>
+                    <span class="badge 
+                        {% if task.status == 'SUCCESS' %}bg-success
+                        {% elif task.status == 'PENDING' %}bg-warning
+                        {% elif task.status == 'FAILURE' %}bg-danger
+                        {% else %}bg-secondary{% endif %}">
+                        {{ task.status }}
+                    </span>
+                </td>
+                <td>{{ task.date_done|date:"d.m.Y H:i:s" }}</td>
+                <td>{{ task.result|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center">Нет данных о задачах.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function checkTaskStatus() {
+        const taskId = document.getElementById('task-id-input').value.trim();
+        const resultContainer = document.getElementById('task-result');
+
+        if (!taskId) {
+            alert('Введите ID задачи!');
+            return;
+        }
+
+        fetch(`/task_status/${taskId}/`)
+            .then(response => response.json())
+            .then(data => {
+                resultContainer.classList.remove('d-none', 'alert-danger');
+                resultContainer.classList.add('alert-info');
+                resultContainer.innerHTML = `
+                    <p><strong>Название задачи:</strong> ${data.task_name || 'Неизвестно'}</p>
+                    <p><strong>ID задачи:</strong> ${data.task_id}</p>
+                    <p><strong>Статус:</strong> ${data.status}</p>
+                    <p><strong>Результат:</strong> ${data.result || 'Результат ещё не готов'}</p>
+                `;
+            })
+            .catch(error => {
+                console.error('Ошибка при получении статуса задачи:', error);
+                resultContainer.classList.remove('d-none', 'alert-info');
+                resultContainer.classList.add('alert-danger');
+                resultContainer.textContent = 'Не удалось получить статус задачи.';
+            });
+    }
+</script>
+{% endblock %}
