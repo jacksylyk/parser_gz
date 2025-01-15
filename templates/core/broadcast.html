@@ -1,0 +1,50 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Создать рассылку</h1>
+
+    {% if error %}
+        <div class="alert alert-danger mt-4">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="text_message" class="form-label">Сообщение</label>
+            <textarea class="form-control" id="text_message" name="text_message" rows="3"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="excel_file" class="form-label">Загрузите список номеров телефонов (Excel)</label>
+            <div>
+                <b>Пример:</b>
+                <table class="table table-bordered col-md-4">
+                    <thead>
+                        <tr>
+                            <td>Номер</td>
+                        </tr>
+                    
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>77771112233</td>
+                        </tr>
+                        <tr>
+
+                            <td>77777777777</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <input type="file" class="form-control" id="excel_file" name="excel_file">
+        </div>
+
+        <div class="mb-3">
+            <label for="time_interval" class="form-label">Интервал времени между рассылками (в секундах)</label>
+            <input type="number" class="form-control" id="time_interval" name="time_interval" min="1" value="60">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Отправить</button>
+    </form>
+</div>
+{% endblock %}

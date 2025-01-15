@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
     path('parser/', include('subject_parser.urls')),
+    path('bot/', include('bot.urls')),
 ]
 
 if settings.DEBUG:

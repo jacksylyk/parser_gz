@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'subject_parser',
     'core',
-    'django_celery_results'
+    'django_celery_results',
+    'bot'
 ]
 
 MIDDLEWARE = [

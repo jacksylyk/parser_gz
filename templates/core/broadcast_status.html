@@ -1,0 +1,12 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Рассылка создана успешно!</h1>
+
+    <p><strong>Сообщение:</strong> {{ text_message }}</p>
+    <p><strong>Количество номеров:</strong> {{ phone_numbers }}</p>
+    <p><strong>Интервал времени:</strong> {{ time_interval }} секунд</p>
+
+    <a href="{% url 'run_broadcast' %}" class="btn btn-secondary mt-3">Создать новую рассылку</a>
+</div>
+{% endblock %}
