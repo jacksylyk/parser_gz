@@ -5,7 +5,7 @@
 <div class="container py-4">
     <!-- Bot Settings Card -->
     <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header bg-dark text-white">
             <h5 class="card-title mb-0">Настройки бота</h5>
         </div>
         <div class="card-body">
@@ -33,7 +33,7 @@
                     </div>
                     {% endif %}
                 </div>
-                <button type="submit" class="btn btn-primary" name="save">
+                <button type="submit" class="btn btn-dark" name="save">
                     <i class="bi bi-save"></i> Сохранить настройки
                 </button>
             </form>
@@ -42,7 +42,7 @@
 
     <!-- Files Management Card -->
     <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Управление файлами</h5>
             <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#uploadFileModal">
                 <i class="bi bi-upload"></i> Загрузить файл
@@ -89,7 +89,6 @@
     </div>
 </div>
 
-<!-- Upload File Modal -->
 <div class="modal fade" id="uploadFileModal" tabindex="-1" aria-labelledby="uploadFileModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -112,7 +111,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary" name="upload_file">
+                    <button type="submit" class="btn btn-dark" name="upload_file">
                         <i class="bi bi-upload"></i> Загрузить
                     </button>
                 </div>
