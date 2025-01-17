@@ -36,7 +36,7 @@ def index(request):
 
 def fetch_customers_view(request):
     task = fetch_and_save_customers.delay()
-    return redirect('task_status_page', task_id=task.id)
+    return redirect('task_status_page')
 
 def task_status_view(request, task_id):
     result = AsyncResult(task_id)
