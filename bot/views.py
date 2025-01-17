@@ -3,6 +3,15 @@ from dotenv import load_dotenv
 import os
 from django.shortcuts import render, redirect
 from bot.bot import bot
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .models import BotKnowledge, File
+from .forms import BotSettingsForm
+
+from django.http import JsonResponse
+from django.shortcuts import render
+from threading import Thread
+from .bot import bot
 
 load_dotenv()
 
@@ -49,7 +58,6 @@ def broadcast(request):
 
     return render(request, "core/broadcast.html")
 
-import json
 
 def check_whatsapp_phones(phones):
     check_url = f"https://7103.api.greenapi.com/waInstance{GREENAPI_INSTANCE_ID}/checkWhatsapp/{GREENAPI_API_TOKEN}"
@@ -76,10 +84,6 @@ def check_whatsapp_phones(phones):
     return filtered
 
 
-from django.http import JsonResponse
-from django.shortcuts import render
-from threading import Thread
-from .bot import bot
 
 bot_thread = None
 bot_running = False
@@ -128,3 +132,52 @@ def bot_status(request):
     global bot_running
 
     return JsonResponse({"status": "running" if bot_running else "stopped"})
+
+
+def bot_settings(request):
+    # Get or create bot knowledge instance
+    bot_knowledge = BotKnowledge.load()
+    
+    if request.method == 'POST':
+        if 'save' in request.POST:
+            # Handle bot settings form
+            form = BotSettingsForm(request.POST, instance=bot_knowledge)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Настройки бота успешно обновлены')
+                return redirect('bot_settings')
+        
+        elif 'upload_file' in request.POST:
+            # Handle file upload
+            filename = request.POST.get('filename')
+            file = request.FILES.get('file')
+            if file:
+                new_file = File(
+                    filename=filename or file.name,
+                    file=file,
+                    knowledge=bot_knowledge
+                )
+                new_file.save()
+                messages.success(request, 'Файл успешно загружен')
+                return redirect('bot_settings')
+        
+        elif 'delete_file' in request.POST:
+            # Handle file deletion
+            file_id = request.POST.get('file_id')
+            try:
+                file = File.objects.get(id=file_id)
+                file.delete()
+                messages.success(request, 'Файл успешно удален')
+            except File.DoesNotExist:
+                messages.error(request, 'Файл не найден')
+            return redirect('bot_settings')
+    
+    else:
+        form = BotSettingsForm(instance=bot_knowledge)
+    
+    files = File.objects.filter(knowledge=bot_knowledge).order_by('-created_at')
+    
+    return render(request, 'core/bot_settings.html', {
+        'form': form,
+        'files': files,
+    })

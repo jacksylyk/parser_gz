@@ -3,19 +3,23 @@ import openai
 from os.path import join
 import requests
 import json
-import enum
+from dotenv import load_dotenv
 
 from openai import OpenAI
 
 
 
 
+
 class WhatsappBot:
-    def __init__(self, instance_id: str, api_token: str, openai_api_key: str):
+    
+    def __init__(self, instance_id: str, api_token: str, openai_api_key: str, storage_id: str):
+        from bot.models import BotKnowledge
         self.instance_id = instance_id
         self.api_token = api_token
         self.openai_api_key = openai_api_key
         self.running = False
+        self.storage_id = storage_id
 
         self.send_message_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/sendMessage/{api_token}"
         self.receive_message_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/receiveNotification/{api_token}?receiveTimeout=5"
@@ -24,14 +28,22 @@ class WhatsappBot:
         self.send_file_by_upload_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/sendFileByUpload/{api_token}"
 
         self.openai_client = OpenAI(api_key=openai_api_key)
+        knowledge = BotKnowledge.load()
+        if knowledge:
+            title = knowledge.title
+            content = knowledge.content
         self.assistant = self.openai_client.beta.assistants.create(
-            name="Консультант по продажам ПК",
-            instructions="""
-            Ты консультант по продажам. Твоя задача помочь клиенту с выбором товара и ответить на его вопросы.
-            Ты продаешь комплектующие для ПК. Спроси у клиента для какой цели ему нужен компьютер и помоги ему подобрать комплектующие.
-            И помни, что клиент всегда прав!
-            """,
-            model="gpt-4-turbo-preview"
+            name=title,
+            instructions=content,
+            model="gpt-4-turbo-preview",
+            tools=[
+                {
+                    "type": "file_search",
+                }
+            ],
+            tool_resources={
+                "file_search": {"vector_store_ids": [storage_id]}
+            },
         )
         self.user_threads = {}
         self.handlers = {}
@@ -257,3 +269,31 @@ class WhatsappBot:
 
     def stop(self):
         self.running = False
+
+
+    def add_file(self, file):
+        from bot.models import File
+        store_id = self.storage_id
+
+        file_object = self.openai_client.files.create(file=(file.filename, file.file), purpose="assistants")
+        self.openai_client.beta.vector_stores.files.create(
+            vector_store_id=store_id, file_id=file_object.id
+        )
+        return file_object.id
+
+    def update_file(self, file):
+        store_id = self.storage_id
+        self.openai_client.beta.vector_stores.files.delete(
+            vector_store_id=store_id, file_id=file.object_id
+        )
+        file_object = self.openai_client.files.create(file=(file.filename, file.file), purpose="assistants")
+        self.openai_client.beta.vector_stores.files.create(
+            vector_store_id=store_id, file_id=file_object.id
+        )
+        return file_object.id
+
+    def delete_file(self, file):
+        store_id = self.storage_id
+        self.openai_client.beta.vector_stores.files.delete(
+            vector_store_id=store_id, file_id=file.object_id
+        )
