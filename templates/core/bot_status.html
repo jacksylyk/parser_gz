@@ -4,12 +4,14 @@
     <h1 class="text-center mb-4">Статус WhatsApp Бота</h1>
     
     {% if status %}
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <h4>Статус бота</h4>
+        <div class="card mb-4">
+            <div 
+                id="bot-header" 
+                class="card-header text-white">
+                <h4 id="bot-status">Статус бота</h4>
             </div>
             <div class="card-body">
-                <p><strong>Статус:</strong> {{ status.stateInstance }}</p>
+                <p><strong>Статус WhatsApp:</strong> {{ status.stateInstance }}</p>
                 <p><strong>Телефон:</strong> {{ status.phone }}</p>
                 <p><strong>ID устройства:</strong> {{ status.deviceId }}</p>
                 <p><strong>Аватар:</strong> {{ status.avatar|default:"Нет аватара" }}</p>
@@ -24,5 +26,63 @@
             Загрузка статуса...
         </div>
     {% endif %}
+    
+    <div class="text-center mt-4">
+        <button class="btn btn-primary me-2" onclick="controlBot('run')">Запустить бота</button>
+        <button class="btn btn-danger" onclick="controlBot('stop')">Остановить бота</button>
+    </div>
 </div>
+
+<script>
+    async function controlBot(action) {
+        const url = `/bot/${action}_bot`;
+        try {
+            const response = await fetch(url, {
+                method: "GET",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            });
+            const result = await response.json();
+            alert(result.message);
+            updateBotStatus(); // Update the bot status after the action
+        } catch (error) {
+            alert("Произошла ошибка: " + error.message);
+        }
+    }
+
+    async function updateBotStatus() {
+        const url = "/bot/status_bot";
+        try {
+            const response = await fetch(url);
+            const result = await response.json();
+            const statusElement = document.getElementById("bot-status");
+            const headerElement = document.getElementById("bot-header");
+            
+            if (result.status) {
+                statusElement.textContent = `Текущий статус бота: ${result.status}`;
+                
+                // Update the background color based on the status
+                if (result.status === "running") {
+                    headerElement.style.backgroundColor = "#198754"; // Green
+                } else if (result.status === "stopped") {
+                    headerElement.style.backgroundColor = "#dc3545"; // Red
+                } else {
+                    headerElement.style.backgroundColor = "#6c757d"; // Gray for unknown states
+                }
+            } else {
+                statusElement.textContent = "Не удалось получить статус бота.";
+                headerElement.style.backgroundColor = "#6c757d"; // Gray for error
+            }
+        } catch (error) {
+            const statusElement = document.getElementById("bot-status");
+            statusElement.textContent = "Ошибка при обновлении статуса.";
+            const headerElement = document.getElementById("bot-header");
+            headerElement.style.backgroundColor = "#6c757d"; // Gray for error
+        }
+    }
+
+    // Automatically update the bot status on page load
+    document.addEventListener("DOMContentLoaded", updateBotStatus);
+</script>
 {% endblock %}

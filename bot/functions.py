@@ -15,6 +15,7 @@ class WhatsappBot:
         self.instance_id = instance_id
         self.api_token = api_token
         self.openai_api_key = openai_api_key
+        self.running = False
 
         self.send_message_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/sendMessage/{api_token}"
         self.receive_message_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/receiveNotification/{api_token}?receiveTimeout=5"
@@ -241,9 +242,10 @@ class WhatsappBot:
             return "Извините, произошла ошибка при обработке вашего запроса."
 
     def run(self, polling_interval: int = 1):
+        self.running = True
         print("Запуск...")
         try:
-            while True:
+            while self.running:
                 data = self.check_new_messages()
 
                 if data is not None:
@@ -252,3 +254,6 @@ class WhatsappBot:
                 time.sleep(polling_interval)
         except KeyboardInterrupt:
             print("Бот отключен.")
+
+    def stop(self):
+        self.running = False

@@ -75,3 +75,56 @@ def check_whatsapp_phones(phones):
     
     return filtered
 
+
+from django.http import JsonResponse
+from django.shortcuts import render
+from threading import Thread
+from .bot import bot
+
+bot_thread = None
+bot_running = False
+
+def run_bot(request):
+    """
+    Start the WhatsApp bot.
+    """
+    global bot_thread, bot_running
+
+    if bot_running:
+        return JsonResponse({"status": "error", "message": "Bot is already running."}, status=400)
+
+    def bot_runner():
+        try:
+            bot.run()  # Call the bot's run method
+        except Exception as e:
+            print(f"Bot encountered an error: {e}")
+
+    # Start the bot in a new thread
+    bot_thread = Thread(target=bot_runner, daemon=True)
+    bot_thread.start()
+    bot_running = True
+    return JsonResponse({"status": "success", "message": "Bot started successfully."})
+
+
+def stop_bot(request):
+    """
+    Stop the WhatsApp bot.
+    """
+    global bot_thread, bot_running
+
+    if not bot_running:
+        return JsonResponse({"status": "error", "message": "Bot is not running."}, status=400)
+
+    # To stop the bot, you might need to implement a stop mechanism in the bot class
+    bot_running = False
+    bot_thread = None
+    return JsonResponse({"status": "success", "message": "Bot stopped successfully."})
+
+
+def bot_status(request):
+    """
+    Get the current status of the bot.
+    """
+    global bot_running
+
+    return JsonResponse({"status": "running" if bot_running else "stopped"})

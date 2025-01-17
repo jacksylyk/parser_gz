@@ -5,12 +5,27 @@ import os
 
 load_dotenv()
 
-GREENAPI_INSTANCE_ID = os.getenv('GREENAPI_INSTANCE_ID')
-GREENAPI_API_TOKEN = os.getenv('GREENAPI_API_TOKEN')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+class BotInstance:
+    _instance = None
 
-bot = WhatsappBot(
-    GREENAPI_INSTANCE_ID,
-    GREENAPI_API_TOKEN,
-    OPENAI_API_KEY
-)
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            try:
+                GREENAPI_INSTANCE_ID = os.getenv('GREENAPI_INSTANCE_ID')
+                GREENAPI_API_TOKEN = os.getenv('GREENAPI_API_TOKEN')
+                OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+                if not all([GREENAPI_INSTANCE_ID, GREENAPI_API_TOKEN, OPENAI_API_KEY]):
+                    raise ValueError("Missing required environment variables for WhatsApp Bot.")
+
+                cls._instance = WhatsappBot(
+                    GREENAPI_INSTANCE_ID,
+                    GREENAPI_API_TOKEN,
+                    OPENAI_API_KEY
+                )
+            except Exception as e:
+                raise RuntimeError(f"Error initializing bot: {e}")
+        return cls._instance
+
+bot = BotInstance.get_instance()
