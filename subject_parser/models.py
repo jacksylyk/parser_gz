@@ -3,7 +3,7 @@ from django.db import models
 
 class Customer(models.Model):
     customer_number = models.CharField(verbose_name="Номер участника", max_length=255)
-    customer_name = models.CharField(verbose_name="Название", max_length=255)
+    customer_name = models.CharField(verbose_name="Название", max_length=518)
     bin = models.CharField(verbose_name='БИН', max_length=255)
 
     def __str__(self):
