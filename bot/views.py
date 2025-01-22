@@ -12,12 +12,14 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from threading import Thread
 from .bot import bot
+from django.contrib.auth.decorators import login_required
 
 load_dotenv()
 
 GREENAPI_INSTANCE_ID = os.getenv('GREENAPI_INSTANCE_ID')
 GREENAPI_API_TOKEN = os.getenv('GREENAPI_API_TOKEN')
 
+@login_required
 def status(request):
     status_url = f"https://7103.api.greenapi.com/waInstance{GREENAPI_INSTANCE_ID}/getWaSettings/{GREENAPI_API_TOKEN}"
     response = requests.get(status_url)
@@ -32,6 +34,7 @@ def status(request):
 
 import pandas as pd
 
+@login_required
 def broadcast(request):
     if request.method == "POST":
         text_message = request.POST.get("text_message", "")
@@ -58,7 +61,7 @@ def broadcast(request):
 
     return render(request, "core/broadcast.html")
 
-
+@login_required
 def check_whatsapp_phones(phones):
     check_url = f"https://7103.api.greenapi.com/waInstance{GREENAPI_INSTANCE_ID}/checkWhatsapp/{GREENAPI_API_TOKEN}"
     filtered = []
@@ -88,6 +91,7 @@ def check_whatsapp_phones(phones):
 bot_thread = None
 bot_running = False
 
+@login_required
 def run_bot(request):
     """
     Start the WhatsApp bot.
@@ -110,6 +114,7 @@ def run_bot(request):
     return JsonResponse({"status": "success", "message": "Bot started successfully."})
 
 
+@login_required
 def stop_bot(request):
     """
     Stop the WhatsApp bot.
@@ -124,7 +129,7 @@ def stop_bot(request):
     bot_thread = None
     return JsonResponse({"status": "success", "message": "Bot stopped successfully."})
 
-
+@login_required
 def bot_status(request):
     """
     Get the current status of the bot.
@@ -133,7 +138,7 @@ def bot_status(request):
 
     return JsonResponse({"status": "running" if bot_running else "stopped"})
 
-
+@login_required
 def bot_settings(request):
     # Get or create bot knowledge instance
     bot_knowledge = BotKnowledge.load()

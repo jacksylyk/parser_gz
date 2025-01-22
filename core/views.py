@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django_celery_results.models import TaskResult
 from core.tasks import fetch_and_save_customers
 from subject_parser.models import Customer
+from django.contrib.auth.decorators import login_required
 
 from django.http import JsonResponse
 from celery.result import AsyncResult
@@ -16,6 +17,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+@login_required
 def index(request):
     customers = Customer.objects.all()
 
@@ -33,11 +35,12 @@ def index(request):
 
     return render(request, 'parser/main.html', {'data': customers_with_phone_numbers, 'page_obj': page_obj})
 
-
+@login_required
 def fetch_customers_view(request):
     task = fetch_and_save_customers.delay()
     return redirect('task_status_page')
 
+@login_required
 def task_status_view(request, task_id):
     result = AsyncResult(task_id)
     response = {
@@ -48,6 +51,7 @@ def task_status_view(request, task_id):
     }
     return JsonResponse(response)
 
+@login_required
 def task_list_view(request):
     tasks = TaskResult.objects.all().order_by('-date_done')[:50]
     return render(request, 'core/results.html', {'tasks': tasks})
@@ -58,6 +62,8 @@ from openpyxl.styles import Font
 from django.http import HttpResponse
 from subject_parser.models import PhoneNumber
 
+
+@login_required
 def export_phone_numbers_to_excel(request):
     wb = openpyxl.Workbook()
     ws = wb.active
