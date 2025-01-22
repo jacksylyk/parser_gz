@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect
 from bot.bot import bot
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import BotKnowledge, File
+from .models import BotKnowledge, File, KeyWord, MyNumber
 from .forms import BotSettingsForm
 
 from django.http import JsonResponse
@@ -23,7 +23,6 @@ GREENAPI_API_TOKEN = os.getenv('GREENAPI_API_TOKEN')
 def status(request):
     status_url = f"https://7103.api.greenapi.com/waInstance{GREENAPI_INSTANCE_ID}/getWaSettings/{GREENAPI_API_TOKEN}"
     response = requests.get(status_url)
-    print(response.json)
     
     if response.status_code == 200:
         data = response.json()
@@ -142,7 +141,8 @@ def bot_status(request):
 def bot_settings(request):
     # Get or create bot knowledge instance
     bot_knowledge = BotKnowledge.load()
-    
+    form = BotSettingsForm(instance=bot_knowledge)  # Ensure `form` is always initialized
+
     if request.method == 'POST':
         if 'save' in request.POST:
             # Handle bot settings form
@@ -176,13 +176,48 @@ def bot_settings(request):
             except File.DoesNotExist:
                 messages.error(request, 'Файл не найден')
             return redirect('bot_settings')
-    
-    else:
-        form = BotSettingsForm(instance=bot_knowledge)
-    
+        
+        elif 'add_keyword' in request.POST:
+            # Handle keyword addition
+            word = request.POST.get('keyword')
+            if word:
+                KeyWord.objects.create(word=word)
+                messages.success(request, 'Ключевое слово добавлено')
+            return redirect('bot_settings')
+
+        elif 'delete_keyword' in request.POST:
+            # Handle keyword deletion
+            keyword_id = request.POST.get('keyword_id')
+            if KeyWord.objects.filter(id=keyword_id).exists():
+                KeyWord.objects.filter(id=keyword_id).delete()
+                messages.success(request, 'Ключевое слово удалено')
+            else:
+                messages.error(request, 'Ключевое слово не найдено')
+            return redirect('bot_settings')
+        
+        elif 'add_number' in request.POST:
+            # Handle phone number addition
+            number = request.POST.get('number')
+            if number:
+                MyNumber.objects.create(number=number)
+                messages.success(request, 'Номер телефона добавлен')
+            return redirect('bot_settings')
+
+        elif 'delete_number' in request.POST:
+            # Handle phone number deletion
+            number_id = request.POST.get('number_id')
+            if MyNumber.objects.filter(id=number_id).exists():
+                MyNumber.objects.filter(id=number_id).delete()
+                messages.success(request, 'Номер телефона удален')
+            else:
+                messages.error(request, 'Номер телефона не найден')
+            return redirect('bot_settings')
+
     files = File.objects.filter(knowledge=bot_knowledge).order_by('-created_at')
-    
+
     return render(request, 'core/bot_settings.html', {
         'form': form,
         'files': files,
+        'keywords': KeyWord.objects.all(),
+        'numbers': MyNumber.objects.all()
     })

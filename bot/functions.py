@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 
 from openai import OpenAI
 
+from bot.models import KeyWord, MyNumber
+
 
 
 
@@ -140,6 +142,7 @@ class WhatsappBot:
             return func
 
         return decorator
+    
     def download_voice_message(self, voice_url: str) -> bytes:
         """
         Загружает голосовое сообщение с указанного URL.
@@ -218,6 +221,13 @@ class WhatsappBot:
                     self.send_message("Извините, не могу обработать запрос.", chat_id)
 
     def ask_openai(self, prompt: str, chat_id: str) -> str:
+        keywords = KeyWord.objects.all().values_list('word', flat=True)
+        my_number = MyNumber.objects.first().number
+        for keyword in keywords:
+            if keyword.lower() in prompt.lower():
+                print('keyword check')
+                self.send_message(f"Ключевое слово «{keyword}» найдено в запросе контакта {chat_id}", f"{my_number}@c.us")
+
         try:
             thread_id = self.get_or_create_thread(chat_id)
             
@@ -256,11 +266,13 @@ class WhatsappBot:
     def run(self, polling_interval: int = 1):
         self.running = True
         print("Запуск...")
+        
         try:
             while self.running:
                 data = self.check_new_messages()
 
                 if data is not None:
+                    
                     self.process_message(data)
 
                 time.sleep(polling_interval)

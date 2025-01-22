@@ -78,3 +78,17 @@ class File(models.Model):
     class Meta:
         verbose_name = 'Файл знаний'
         verbose_name_plural = 'Файлы знаний'
+
+class MyNumber(models.Model):
+    number = models.CharField(max_length=255, verbose_name='Номер телефона')
+
+    class Meta:
+        verbose_name = 'Номер телефона'
+        verbose_name_plural = 'Номера телефонов'
+
+class KeyWord(models.Model):
+    word = models.CharField(max_length=255, verbose_name='Ключевое слово')
+
+    class Meta:
+        verbose_name = 'Ключевое слово'
+        verbose_name_plural = 'Ключевые слова'
