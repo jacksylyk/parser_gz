@@ -13,6 +13,7 @@ from django.shortcuts import render
 from threading import Thread
 from .bot import bot
 from django.contrib.auth.decorators import login_required
+import subprocess
 
 load_dotenv()
 
@@ -221,3 +222,13 @@ def bot_settings(request):
         'keywords': KeyWord.objects.all(),
         'numbers': MyNumber.objects.all()
     })
+
+@login_required
+def restart_gunicorn(request):
+    if request.method == "POST":
+        try:
+            subprocess.run(["sudo", "systemctl", "restart", "gunicorn"], check=True)
+            return JsonResponse({"message": "Gunicorn успешно перезапущен."})
+        except subprocess.CalledProcessError as e:
+            return JsonResponse({"message": f"Ошибка при перезапуске Gunicorn: {e}"}, status=500)
+    return JsonResponse({"message": "Неверный метод запроса."}, status=400)

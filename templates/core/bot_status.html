@@ -30,6 +30,7 @@
     <div class="text-center mt-4">
         <button class="btn btn-primary me-2" onclick="controlBot('run')">Запустить бота</button>
         <button class="btn btn-danger" onclick="controlBot('stop')">Остановить бота</button>
+        <button class="btn btn-warning mt-3" onclick="restartBot()">Перезагрузить бота</button>
     </div>
 </div>
 
@@ -79,6 +80,22 @@
             statusElement.textContent = "Ошибка при обновлении статуса.";
             const headerElement = document.getElementById("bot-header");
             headerElement.style.backgroundColor = "#6c757d"; // Gray for error
+        }
+    }
+    async function restartBot() {
+        const url = "/bot/restart_gunicorn";
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            });
+            const result = await response.json();
+            alert(result.message);
+            updateBotStatus(); // Обновить статус после перезапуска
+        } catch (error) {
+            alert("Ошибка при перезапуске: " + error.message);
         }
     }
 

@@ -34,6 +34,7 @@ class WhatsappBot:
         if knowledge:
             title = knowledge.title
             content = knowledge.content
+            print(title, content)
         self.assistant = self.openai_client.beta.assistants.create(
             name=title,
             instructions=content,
@@ -47,6 +48,7 @@ class WhatsappBot:
                 "file_search": {"vector_store_ids": [storage_id]}
             },
         )
+        print(self.assistant)
         self.user_threads = {}
         self.handlers = {}
 
@@ -270,9 +272,8 @@ class WhatsappBot:
         try:
             while self.running:
                 data = self.check_new_messages()
-
+                print(data)
                 if data is not None:
-                    
                     self.process_message(data)
 
                 time.sleep(polling_interval)
