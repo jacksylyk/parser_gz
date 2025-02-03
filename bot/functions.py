@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from bot.models import KeyWord, MyNumber
-
+from bot.models import BotKnowledge
 
 
 
@@ -16,7 +16,7 @@ from bot.models import KeyWord, MyNumber
 class WhatsappBot:
     
     def __init__(self, instance_id: str, api_token: str, openai_api_key: str, storage_id: str):
-        from bot.models import BotKnowledge
+        
         self.instance_id = instance_id
         self.api_token = api_token
         self.openai_api_key = openai_api_key
@@ -45,7 +45,7 @@ class WhatsappBot:
                 }
             ],
             tool_resources={
-                "file_search": {"vector_store_ids": [storage_id]}
+                "file_search": {"vector_store_ids": [self.storage_id]}
             },
         )
         print(self.assistant)
@@ -267,7 +267,23 @@ class WhatsappBot:
 
     def run(self, polling_interval: int = 1):
         self.running = True
-        print("Запуск...")
+        knowledge = BotKnowledge.load()
+        if knowledge:
+            title = knowledge.title
+            content = knowledge.content
+        self.assistant = self.openai_client.beta.assistants.create(
+            name=title,
+            instructions=content,
+            model="gpt-4-turbo-preview",
+            tools=[
+                {
+                    "type": "file_search",
+                }
+            ],
+            tool_resources={
+                "file_search": {"vector_store_ids": [self.storage_id]}
+            },
+        )
         
         try:
             while self.running:
