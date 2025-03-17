@@ -33,9 +33,6 @@ def status(request):
         return render(request, 'core/bot_status.html', {'error': 'Unable to fetch status'})
 
 import pandas as pd
-from django.core.files.storage import default_storage
-
-from django.core.files.base import ContentFile
 
 @login_required
 def broadcast(request):
@@ -49,9 +46,10 @@ def broadcast(request):
         if not excel_file:
             return render(request, "core/broadcast.html", {"error": "Загрузите файл с номерами телефонов."})
 
-        file_path = default_storage.save(f"uploads/{excel_file.name}", ContentFile(excel_file.read()))
-
-        task = broadcast_task.delay(text_message, file_path, time_interval)
+        df = pd.read_excel(file_path)
+        phone_numbers = df.iloc[:, 0].dropna().tolist()
+        checked_numbers = check_whatsapp_phones(phone_numbers)
+        task = broadcast_task.delay(text_message, checked_numbers, time_interval)
 
         return render(request, "core/broadcast_status.html", {
             "text_message": text_message,
