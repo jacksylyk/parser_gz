@@ -1,3 +1,4 @@
+from django.conf import settings
 import requests
 from dotenv import load_dotenv
 import os
@@ -37,25 +38,30 @@ import pandas as pd
 @login_required
 def broadcast(request):
     from core.tasks import broadcast_task
+
     if request.method == "POST":
         text_message = request.POST.get("text_message", "")
         time_interval = int(request.POST.get("time_interval", 0))
-
         excel_file = request.FILES.get("excel_file")
 
         if not excel_file:
             return render(request, "core/broadcast.html", {"error": "Загрузите файл с номерами телефонов."})
 
-        df = pd.read_excel(excel_file)
-        phone_numbers = df.iloc[:, 0].dropna().tolist()
-        checked_numbers = check_whatsapp_phones(phone_numbers)
-        task = broadcast_task.delay(text_message, checked_numbers, time_interval)
+        # Save the uploaded file to a temporary location
+        file_path = os.path.join(settings.MEDIA_ROOT, excel_file.name)
+        with open(file_path, "wb") as f:
+            for chunk in excel_file.chunks():
+                f.write(chunk)
+
+        # Pass file path to the task
+        task = broadcast_task.delay(text_message, file_path, time_interval)
 
         return render(request, "core/broadcast_status.html", {
             "text_message": text_message,
             "phone_numbers": "Задача запущена, проверьте статус.",
             "task_id": task.id
         })
+
     return render(request, "core/broadcast.html")
 
 def check_whatsapp_phones(phones):
