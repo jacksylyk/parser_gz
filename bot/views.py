@@ -34,11 +34,12 @@ def status(request):
 
 import pandas as pd
 from django.core.files.storage import default_storage
-from core.tasks import broadcast_task
+
 from django.core.files.base import ContentFile
 
 @login_required
 def broadcast(request):
+    from core.tasks import broadcast_task
     if request.method == "POST":
         text_message = request.POST.get("text_message", "")
         time_interval = int(request.POST.get("time_interval", 0))
