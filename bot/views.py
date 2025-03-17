@@ -46,7 +46,7 @@ def broadcast(request):
         if not excel_file:
             return render(request, "core/broadcast.html", {"error": "Загрузите файл с номерами телефонов."})
 
-        df = pd.read_excel(file_path)
+        df = pd.read_excel(excel_file)
         phone_numbers = df.iloc[:, 0].dropna().tolist()
         checked_numbers = check_whatsapp_phones(phone_numbers)
         task = broadcast_task.delay(text_message, checked_numbers, time_interval)
