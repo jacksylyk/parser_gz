@@ -62,6 +62,10 @@ def parse_phones():
     
     return {"message": "Phone numbers search task completed."}
 
+from bot.views import check_whatsapp_phones
+import pandas as pd
+from bot.bot import bot
+
 @shared_task
 def broadcast_task(text_message, file_path, time_interval):
     """Фоновая задача рассылки сообщений через WhatsApp."""
