@@ -7,5 +7,5 @@ class BotSettingsForm(forms.ModelForm):
         fields = ['title', 'content']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'content': forms.Textarea(attrs={'rows': 5, 'class': 'form-control'}),
+            'content': forms.Textarea(attrs={'rows': 30, 'class': 'form-control'}),
         }

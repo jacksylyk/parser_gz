@@ -62,3 +62,11 @@ def parse_phones():
     
     return {"message": "Phone numbers search task completed."}
 
+@shared_task
+def broadcast_task(text_message, file_path, time_interval):
+    """Фоновая задача рассылки сообщений через WhatsApp."""
+    df = pd.read_excel(file_path)
+    phone_numbers = df.iloc[:, 0].dropna().tolist()
+    checked_numbers = check_whatsapp_phones(phone_numbers)
+    bot.broadcast_message(text_message, checked_numbers, time_interval)
+    return f"Отправлено сообщений: {len(checked_numbers)}"

@@ -33,6 +33,9 @@ def status(request):
         return render(request, 'core/bot_status.html', {'error': 'Unable to fetch status'})
 
 import pandas as pd
+from django.core.files.storage import default_storage
+from core.tasks import broadcast_task
+from django.core.files.base import ContentFile
 
 @login_required
 def broadcast(request):
@@ -45,23 +48,17 @@ def broadcast(request):
         if not excel_file:
             return render(request, "core/broadcast.html", {"error": "Загрузите файл с номерами телефонов."})
 
-        try:
-            df = pd.read_excel(excel_file)
-            phone_numbers = df.iloc[:, 0].dropna().tolist()
-            checked_numbers = check_whatsapp_phones(phone_numbers)
-            bot.broadcast_message(text_message, checked_numbers, time_interval)
-        except Exception as e:
-            return render(request, "core/broadcast.html", {"error": f"Ошибка при чтении файла: {e}"})
+        file_path = default_storage.save(f"uploads/{excel_file.name}", ContentFile(excel_file.read()))
+
+        task = broadcast_task.delay(text_message, file_path, time_interval)
 
         return render(request, "core/broadcast_status.html", {
             "text_message": text_message,
-            "phone_numbers": len(phone_numbers),
-            "time_interval": time_interval
+            "phone_numbers": "Задача запущена, проверьте статус.",
+            "task_id": task.id
         })
-
     return render(request, "core/broadcast.html")
 
-@login_required
 def check_whatsapp_phones(phones):
     check_url = f"https://7103.api.greenapi.com/waInstance{GREENAPI_INSTANCE_ID}/checkWhatsapp/{GREENAPI_API_TOKEN}"
     filtered = []
