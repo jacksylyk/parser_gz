@@ -91,7 +91,7 @@ def check_whatsapp_phones(phones):
 
 
 bot_thread = None
-bot_running = False
+bot_running = bot.running
 
 @login_required
 def run_bot(request):

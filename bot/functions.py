@@ -9,14 +9,13 @@ from openai import OpenAI
 
 from bot.models import KeyWord, MyNumber
 from bot.models import BotKnowledge
-
+from core.models import Chat, Message
 
 
 
 class WhatsappBot:
     
     def __init__(self, instance_id: str, api_token: str, openai_api_key: str, storage_id: str):
-        
         self.instance_id = instance_id
         self.api_token = api_token
         self.openai_api_key = openai_api_key
@@ -26,47 +25,36 @@ class WhatsappBot:
         self.send_message_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/sendMessage/{api_token}"
         self.receive_message_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/receiveNotification/{api_token}?receiveTimeout=5"
         self.delete_message_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/deleteNotification/{api_token}/"
-        self.send_location_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/sendLocation/{api_token}"
-        self.send_file_by_upload_url = f"https://7103.api.greenapi.com/waInstance{instance_id}/sendFileByUpload/{api_token}"
-
+        
         self.openai_client = OpenAI(api_key=openai_api_key)
+        
         knowledge = BotKnowledge.load()
         if knowledge:
             title = knowledge.title
             content = knowledge.content
-            print(title, content)
+        else:
+            title, content = "Assistant", "General AI Assistant"
+        
         self.assistant = self.openai_client.beta.assistants.create(
             name=title,
             instructions=content,
             model="gpt-4-turbo-preview",
-            tools=[
-                {
-                    "type": "file_search",
-                }
-            ],
-            tool_resources={
-                "file_search": {"vector_store_ids": [self.storage_id]}
-            },
+            tools=[{"type": "file_search"}],
+            tool_resources={"file_search": {"vector_store_ids": [self.storage_id]}},
         )
-        print(self.assistant)
+        
         self.user_threads = {}
         self.handlers = {}
 
     def get_or_create_thread(self, chat_id: str) -> str:
-        """Получает существующий или создает новый thread для пользователя"""
         if chat_id not in self.user_threads:
             thread = self.openai_client.beta.threads.create()
             self.user_threads[chat_id] = thread.id
         return self.user_threads[chat_id]
 
     def send_message(self, message: str, chat_id: str):
-        payload = {
-            "chatId": chat_id,
-            "message": message
-        }
-        headers = {
-            'Content-Type': 'application/json'
-        }
+        payload = {"chatId": chat_id, "message": message}
+        headers = {'Content-Type': 'application/json'}
         requests.post(self.send_message_url, headers=headers, data=json.dumps(payload))
 
     def broadcast_message(self, message: str, chat_ids: list, sleep_time: int):
@@ -224,46 +212,58 @@ class WhatsappBot:
 
     def ask_openai(self, prompt: str, chat_id: str) -> str:
         keywords = KeyWord.objects.all().values_list('word', flat=True)
-        my_number = MyNumber.objects.first().number
-        for keyword in keywords:
-            if keyword.lower() in prompt.lower():
-                print('keyword check')
-                self.send_message(f"Ключевое слово «{keyword}» найдено в запросе контакта {chat_id}", f"{my_number}@c.us")
-
-        try:
-            thread_id = self.get_or_create_thread(chat_id)
-            
+        my_number_obj = MyNumber.objects.first()
+        if my_number_obj:
+            my_number = my_number_obj.number
+        else:
+            my_number = None
+        if my_number:
+            for keyword in keywords:
+                if keyword.lower() in prompt.lower():
+                    self.send_message(f"Ключевое слово «{keyword}» найдено в запросе контакта {chat_id}", f"{my_number}@c.us")
+        
+        thread_id = self.get_or_create_thread(chat_id)
+        
+        # Получаем историю сообщений
+        chat, _ = Chat.objects.get_or_create(chat_id=chat_id, defaults={'number': chat_id})
+        messages = Message.objects.filter(chat=chat).order_by('-created_at')[:10]
+        messages = reversed(messages)  # Сортируем от старых к новым
+        
+        # Отправляем историю в OpenAI
+        for message in messages:
             self.openai_client.beta.threads.messages.create(
                 thread_id=thread_id,
-                role="user",
-                content=prompt
+                role="assistant" if message.is_bot else "user",
+                content=message.text
             )
-            
-            run = self.openai_client.beta.threads.runs.create(
-                thread_id=thread_id,
-                assistant_id=self.assistant.id
-            )
-            
-            while True:
-                run = self.openai_client.beta.threads.runs.retrieve(
-                    thread_id=thread_id,
-                    run_id=run.id
-                )
-                if run.status == 'completed':
-                    break
-                elif run.status == 'failed':
-                    return "Извините, произошла ошибка при обработке вашего запроса."
-                time.sleep(1)
-            
-            messages = self.openai_client.beta.threads.messages.list(
-                thread_id=thread_id
-            )
-            
-            return messages.data[0].content[0].text.value
-
-        except Exception as e:
-            print(f"Ошибка OpenAI Assistant: {e}")
-            return "Извините, произошла ошибка при обработке вашего запроса."
+        
+        self.openai_client.beta.threads.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=prompt
+        )
+        
+        run = self.openai_client.beta.threads.runs.create(
+            thread_id=thread_id,
+            assistant_id=self.assistant.id
+        )
+        
+        while True:
+            run = self.openai_client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+            if run.status == 'completed':
+                break
+            elif run.status == 'failed':
+                return "Извините, произошла ошибка при обработке вашего запроса."
+            time.sleep(1)
+        
+        messages = self.openai_client.beta.threads.messages.list(thread_id=thread_id)
+        response_text = messages.data[0].content[0].text.value
+        
+        # Сохраняем ответ в базу
+        Message.objects.create(chat=chat, text=prompt, is_bot=False)
+        Message.objects.create(chat=chat, text=response_text, is_bot=True)
+        
+        return response_text
 
     def run(self, polling_interval: int = 1):
         self.running = True
