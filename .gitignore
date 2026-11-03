@@ -1,6 +1,5 @@
 /venv/
 /.venv/
-*/migrations/*
 db.sqlite3
 /.idea/
 *.pdf
@@ -8,3 +7,5 @@ db.sqlite3
 */*/*/__pycache__/
 .env
 media
+__pycache__/
+*.pyc
